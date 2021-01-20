@@ -1,0 +1,26 @@
+version: '3'
+services:
+  api:
+    build: .
+    network_mode: bridge
+    env_file: ./env
+    links:
+      - es
+    volumes:
+      - ./app/:/usr/src/app
+    ports:
+      - 8080:8080
+  es:
+    image: elasticsearch:7.10.1
+    environment: 
+      - bootstrap.memory_lock=true
+      - cluster.initial_master_nodes=es
+      - node.name=es
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    network_mode: bridge
+    ports: 
+      - 9200:9200
+      - 9300:9300
