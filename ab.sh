@@ -1,4 +1,6 @@
- 
+ # To install apache benchmark 
+ # ubuntu - sudo apt install apache2-utils
+ # arch linux - sudo pacman -Sy & sudo pacman -S apache-tools
 RUST_PORT=8080
 JS_PORT=3000
 echo "Benchmarking RUST"

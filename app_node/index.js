@@ -16,7 +16,7 @@ app.get('/', async (req, res) => {
             }
         }
     }));
-    return res.json(es_resp.hits.hits)
+    return res.json(es_resp.hits.hits.map((hit) => hit._source))
 })
 
 app.listen(port, () => {
