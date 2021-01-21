@@ -1,5 +1,7 @@
 use reqwest::Response;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::de::DeserializeOwned;
+use serde::ser::{SerializeStruct, Serializer};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -69,8 +71,11 @@ impl ElasticSearchClient {
         format!("{}/{}/_doc/{}", self.address, index, id)
     }
 
-    fn search_url(&self, query: &str) -> String {
+    fn search_url_with_query(&self, query: &str) -> String {
         format!("{}/_search?q={}", self.address, query)
+    }
+    fn search_url(&self) -> String {
+        format!("{}/_search", self.address)
     }
 
     pub async fn post<T>(
@@ -107,13 +112,34 @@ impl ElasticSearchClient {
         }
     }
 
-    pub async fn search<T>(&self, query: &str) -> Result<ESSearchResult, ESError>
+    pub async fn search<T>(&self, input: &SearchInput) -> Result<ESSearchResult, ESError>
     where
         T: Serialize + DeserializeOwned,
     {
-        match self.client.get(&self.search_url(query)).send().await {
-            Ok(resp) => Ok(Self::resp_into_type::<ESSearchResult>(resp).await?),
-            _ => Err(ESError::ConnectionError),
+        // dbg!(serde_json::to_value(input));
+        match &input.query {
+            QueryInput::Text(query) => {
+                match self
+                    .client
+                    .get(&self.search_url_with_query(query))
+                    .json(input)
+                    .send()
+                    .await
+                {
+                    Ok(resp) => Ok(Self::resp_into_type::<ESSearchResult>(resp).await?),
+                    _ => Err(ESError::ConnectionError),
+                }
+            }
+            _ => match self
+                .client
+                .post(&self.search_url())
+                .json(input)
+                .send()
+                .await
+            {
+                Ok(resp) => Ok(Self::resp_into_type::<ESSearchResult>(resp).await?),
+                _ => Err(ESError::ConnectionError),
+            },
         }
     }
 
@@ -121,10 +147,12 @@ impl ElasticSearchClient {
     where
         T: DeserializeOwned,
     {
-        resp.json::<T>().await.map_err(|err| {
-            dbg!(err);
-            ESError::DeserializationError
-        })
+        let json = resp
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|_| ESError::DeserializationError)?;
+        // dbg!(&json);
+        serde_json::from_value::<T>(json).map_err(|_| ESError::DeserializationError)
     }
 }
 
@@ -160,7 +188,7 @@ pub struct ESSearchResult {
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct ESSearchResultHits {
     pub total: serde_json::Value,
-    pub max_score: f32,
+    pub max_score: Option<f32>,
     pub hits: Vec<ESSearchResultHit>,
 }
 
@@ -186,5 +214,209 @@ impl<T> ESActionInfo<T> {
             .as_ref()
             .map(|res| res == &result)
             .unwrap_or(false)
+    }
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+pub struct SearchInput {
+    from: Option<u64>,
+    size: Option<u64>,
+    query: QueryInput,
+}
+
+impl SearchInput {
+    pub fn new(query: QueryInput, size: Option<u64>, from: Option<u64>) -> Self {
+        Self { query, from, size }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum QueryInput {
+    Text(String),
+    Bool(QueryDSLInput),
+}
+
+impl Serialize for QueryInput {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            QueryInput::Text(_) => serializer.serialize_none(),
+            QueryInput::Bool(input) => {
+                let mut state = serializer.serialize_struct("QueryInput::Bool", 1)?;
+                state.serialize_field("bool", input)?;
+                state.end()
+            }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Default)]
+pub struct QueryDSLInput {
+    pub must: Option<Vec<MatchClause>>,
+    pub must_not: Option<Vec<MatchClause>>,
+    pub filter: Option<Vec<FilterClause>>,
+    pub should: Option<Vec<TermClause>>,
+}
+
+impl Serialize for QueryDSLInput {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("QueryDSLInput", 4)?;
+        let mut has_fields = false;
+        if let Some(must) = self.must.as_ref() {
+            if must.len() > 0 {
+                state.serialize_field("must", must)?;
+                has_fields = true;
+            }
+        }
+        if let Some(must_not) = self.must_not.as_ref() {
+            if must_not.len() > 0 {
+                state.serialize_field("must_not", must_not)?;
+                has_fields = true;
+            }
+        }
+        if let Some(filter) = self.filter.as_ref() {
+            if filter.len() > 0 {
+                state.serialize_field("filter", filter)?;
+                has_fields = true;
+            }
+        }
+        if let Some(should) = self.should.as_ref() {
+            if should.len() > 0 {
+                state.serialize_field("should", should)?;
+                has_fields = true;
+            }
+        }
+        if !has_fields {
+            state.serialize_field("match_all", &serde_json::json!({}))?;
+        }
+        state.end()
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct MatchClause {
+    name: String,
+    search: String,
+}
+
+impl MatchClause {
+    pub fn new(name: String, search: String) -> Self {
+        Self { name, search }
+    }
+}
+
+impl Serialize for MatchClause {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("MatchClause", 1)?;
+        let MatchClause { name, search } = self;
+        let data = serde_json::json!({ name: search });
+        state.serialize_field("match", &data)?;
+        state.end()
+    }
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(untagged)]
+pub enum FilterClause {
+    Term(TermClause),
+    Range(RangeClause),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct TermClause {
+    name: String,
+    value: String,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct RangeClause {
+    name: String,
+    operation: FilterClauseRangeOp,
+    value: String,
+}
+
+impl Serialize for TermClause {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let TermClause { name, value } = self;
+        let mut state = serializer.serialize_struct("TermClause", 1)?;
+        let data = serde_json::json!({ name: value });
+        state.serialize_field("term", &data)?;
+        state.end()
+    }
+}
+
+impl Serialize for RangeClause {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let RangeClause {
+            name,
+            operation,
+            value,
+        } = self;
+        let mut state = serializer.serialize_struct("RangeClause", 1)?;
+        state.serialize_field("range", &serde_json::json!({ name: { operation: value }}))?;
+        state.end()
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum FilterClauseRangeOp {
+    Gte,
+    Lte,
+    Gt,
+    Lt,
+    Eq,
+    Neq,
+}
+
+impl From<&FilterClauseRangeOp> for String {
+    fn from(op: &FilterClauseRangeOp) -> Self {
+        String::from(match op {
+            FilterClauseRangeOp::Gte => "gte",
+            FilterClauseRangeOp::Lte => "lte",
+            FilterClauseRangeOp::Gt => "gt",
+            FilterClauseRangeOp::Lt => "lt",
+            FilterClauseRangeOp::Eq => "eq",
+            FilterClauseRangeOp::Neq => "neq",
+        })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn verify_query_input() {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&FilterClause::Term(TermClause {
+                name: String::from("a"),
+                value: String::from("b")
+            }))
+            .unwrap()
+        );
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&FilterClause::Range(RangeClause {
+                name: String::from("a"),
+                operation: FilterClauseRangeOp::Gte,
+                value: String::from("b")
+            }))
+            .unwrap()
+        )
     }
 }
