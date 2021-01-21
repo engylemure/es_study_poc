@@ -41,6 +41,7 @@ pub struct UserInput {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub enum RelationshipStatus {
     Single,
     Married,
@@ -234,6 +235,7 @@ impl SearchInput {
 pub enum QueryInput {
     Text(String),
     Bool(QueryDSLInput),
+    MatchAll,
 }
 
 impl Serialize for QueryInput {
@@ -246,6 +248,11 @@ impl Serialize for QueryInput {
             QueryInput::Bool(input) => {
                 let mut state = serializer.serialize_struct("QueryInput::Bool", 1)?;
                 state.serialize_field("bool", input)?;
+                state.end()
+            }
+            QueryInput::MatchAll => {
+                let mut state = serializer.serialize_struct("QueryInput::Bool", 1)?;
+                state.serialize_field("match_all", &serde_json::json!({}))?;
                 state.end()
             }
         }
@@ -266,33 +273,25 @@ impl Serialize for QueryDSLInput {
         S: Serializer,
     {
         let mut state = serializer.serialize_struct("QueryDSLInput", 4)?;
-        let mut has_fields = false;
         if let Some(must) = self.must.as_ref() {
             if must.len() > 0 {
                 state.serialize_field("must", must)?;
-                has_fields = true;
             }
         }
         if let Some(must_not) = self.must_not.as_ref() {
             if must_not.len() > 0 {
                 state.serialize_field("must_not", must_not)?;
-                has_fields = true;
             }
         }
         if let Some(filter) = self.filter.as_ref() {
             if filter.len() > 0 {
                 state.serialize_field("filter", filter)?;
-                has_fields = true;
             }
         }
         if let Some(should) = self.should.as_ref() {
             if should.len() > 0 {
                 state.serialize_field("should", should)?;
-                has_fields = true;
             }
-        }
-        if !has_fields {
-            state.serialize_field("match_all", &serde_json::json!({}))?;
         }
         state.end()
     }

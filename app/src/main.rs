@@ -42,20 +42,25 @@ pub async fn view_user(
 fn search_input(input: HashMap<String, String>) -> SearchInput {
     let query_input = match input.get("query") {
         Some(query) => QueryInput::Text(query.to_string()),
-        None => QueryInput::Bool(QueryDSLInput {
-            must: Some(
-                ["name", "id", "job", "relationship_status", "age"]
-                    .iter()
-                    .map(|attr| {
-                        input
-                            .get(*attr)
-                            .map(|val| MatchClause::new(attr.to_string(), val.to_string()))
-                    })
-                    .flatten()
-                    .collect(),
-            ),
-            ..Default::default()
-        }),
+        None => {
+            let must: Vec<MatchClause> = ["name", "id", "job", "relationship_status", "age"]
+                .iter()
+                .map(|attr| {
+                    input
+                        .get(*attr)
+                        .map(|val| MatchClause::new(attr.to_string(), val.to_string()))
+                })
+                .flatten()
+                .collect();
+            if must.len() > 0 {
+                QueryInput::Bool(QueryDSLInput {
+                    must: Some(must),
+                    ..Default::default()
+                })
+            } else {
+                QueryInput::MatchAll
+            }
+        }
     };
     SearchInput::new(
         query_input,
