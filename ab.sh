@@ -8,5 +8,5 @@ ab -n 10000 -c 1000 "http://localhost:$RUST_PORT/users/search?size=50&name=Jorda
 echo "Benchmarking JS"
 ab -n 10000 -c 1000 "http://localhost:$JS_PORT/" > js_bench
 echo "Diff bench output"
-diff js_bench rust_bench
+diff rust_bench js_bench 
 rm js_bench rust_bench
