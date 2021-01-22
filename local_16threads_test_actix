@@ -10,50 +10,50 @@ Diff bench output
 ---
 > Document Path:          /
 16c16
-< Time taken for tests:   0.926 seconds
+< Time taken for tests:   8.825 seconds
 ---
-> Time taken for tests:   1.386 seconds
+> Time taken for tests:   12.832 seconds
 19c19
-< Total transferred:      20170000 bytes
+< Total transferred:      201700000 bytes
 ---
-> Total transferred:      21170000 bytes
+> Total transferred:      211700000 bytes
 21,24c21,24
-< Requests per second:    10801.34 [#/sec] (mean)
-< Time per request:       92.581 [ms] (mean)
-< Time per request:       0.093 [ms] (mean, across all concurrent requests)
-< Transfer rate:          21275.69 [Kbytes/sec] received
+< Requests per second:    11331.89 [#/sec] (mean)
+< Time per request:       176.493 [ms] (mean)
+< Time per request:       0.088 [ms] (mean, across all concurrent requests)
+< Transfer rate:          22320.72 [Kbytes/sec] received
 ---
-> Requests per second:    7216.77 [#/sec] (mean)
-> Time per request:       138.566 [ms] (mean)
-> Time per request:       0.139 [ms] (mean, across all concurrent requests)
-> Transfer rate:          14919.82 [Kbytes/sec] received
+> Requests per second:    7793.30 [#/sec] (mean)
+> Time per request:       256.631 [ms] (mean)
+> Time per request:       0.128 [ms] (mean, across all concurrent requests)
+> Transfer rate:          16111.73 [Kbytes/sec] received
 28,31c28,31
-< Connect:        0    3   3.2      2      13
-< Processing:     2   85  44.8     82     336
-< Waiting:        1   85  44.8     81     334
-< Total:          2   88  44.6     84     338
+< Connect:        0   11  93.8      2    1032
+< Processing:     1  163 139.0    129    1586
+< Waiting:        1  163 139.0    128    1585
+< Total:          1  174 168.8    131    1587
 ---
-> Connect:        0    2   3.4      0      12
-> Processing:    17  129  36.2    126     286
-> Waiting:        5  125  33.8    123     279
-> Total:         17  131  34.5    127     287
+> Connect:        0   25 229.8      0    3143
+> Processing:     6  229  57.1    228     467
+> Waiting:        6  225  56.1    224     460
+> Total:         25  254 235.0    229    3432
 34,42c34,42
-<   50%     84
-<   66%    102
-<   75%    114
-<   80%    121
-<   90%    145
-<   95%    170
-<   98%    197
-<   99%    222
-<  100%    338 (longest request)
+<   50%    131
+<   66%    163
+<   75%    190
+<   80%    209
+<   90%    290
+<   95%    439
+<   98%    793
+<   99%   1111
+<  100%   1587 (longest request)
 ---
->   50%    127
->   66%    131
->   75%    136
->   80%    140
->   90%    174
->   95%    216
->   98%    228
->   99%    241
->  100%    287 (longest request)
+>   50%    229
+>   66%    248
+>   75%    262
+>   80%    272
+>   90%    293
+>   95%    311
+>   98%    431
+>   99%   1182
+>  100%   3432 (longest request)
