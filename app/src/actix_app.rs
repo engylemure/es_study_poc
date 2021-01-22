@@ -89,11 +89,13 @@ pub async fn search_in_user(
     }
 }
 
+#[actix_web::main]
 pub async fn main(
-    es_client: ElasticSearchClient,
-    server_address: (Ipv4Addr, u16),
 ) -> std::io::Result<()> {
+    let (db_host, db_port) = db_cfg();
+    let es_client = ElasticSearchClient::new(db_host, db_port);
     let es_client = web::Data::new(es_client);
+    let server_address = server_address();
     let server = HttpServer::new(move || {
         App::new()
             .app_data(es_client.clone())

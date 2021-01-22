@@ -2,6 +2,7 @@ use reqwest::Response;
 use serde::de::DeserializeOwned;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
+use std::net::Ipv4Addr;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -418,4 +419,27 @@ mod test {
             .unwrap()
         )
     }
+}
+
+pub fn server_address() -> (Ipv4Addr, u16) {
+    (
+        std::env::var("SERVER_HOST")
+            .unwrap_or(String::from("127.0.0.1"))
+            .parse()
+            .expect("SERVER_HOST should be a valid Ip v4"),
+        std::env::var("SERVER_PORT")
+            .unwrap_or(String::from("8080"))
+            .parse()
+            .expect("SERVER_PORT should be a u16"),
+    )
+}
+
+pub fn db_cfg() -> (String, u16) {
+    (
+        std::env::var("DB_HOST").unwrap_or(String::from("localhost")),
+        std::env::var("DB_HOST")
+            .unwrap_or(String::from("9200"))
+            .parse()
+            .expect("DB_PORT should be a number!"),
+    )
 }

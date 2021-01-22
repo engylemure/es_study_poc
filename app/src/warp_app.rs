@@ -92,7 +92,10 @@ pub async fn search_in_user(
     })
 }
 
-pub async fn main(es_client: ElasticSearchClient, server_address: (Ipv4Addr, u16)) -> std::io::Result<()> {
+#[tokio::main]
+pub async fn main() -> std::io::Result<()> {
+    let (db_host, db_port) = db_cfg();
+    let es_client = ElasticSearchClient::new(db_host, db_port);
     let es_client = Arc::new(es_client);
     let es_client = warp::any().map(move || Arc::clone(&es_client));
 
@@ -117,7 +120,7 @@ pub async fn main(es_client: ElasticSearchClient, server_address: (Ipv4Addr, u16
         .and(create_user.or(search_user).or(view_user))
         .with(warp::log::log("app"));
 
-    let srv_addr = server_address;
+    let srv_addr = server_address();
 
     println!("Server started at {}:{}", srv_addr.0, srv_addr.1);
     warp::serve(routes).run(srv_addr).await;

@@ -10,8 +10,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "before-exit": "^1.0.0",
     "elasticsearch": "^16.7.2",
     "express": "^4.17.1",
-    "before-exit": "^1.0.0"
+    "morgan": "^1.10.0"
   }
 }

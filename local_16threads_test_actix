@@ -1,0 +1,59 @@
+Benchmarking RUST
+Benchmarking JS
+Diff bench output
+10c10
+< Server Port:            8080
+---
+> Server Port:            3000
+12c12
+< Document Path:          /users/search?size=50
+---
+> Document Path:          /
+16c16
+< Time taken for tests:   0.926 seconds
+---
+> Time taken for tests:   1.386 seconds
+19c19
+< Total transferred:      20170000 bytes
+---
+> Total transferred:      21170000 bytes
+21,24c21,24
+< Requests per second:    10801.34 [#/sec] (mean)
+< Time per request:       92.581 [ms] (mean)
+< Time per request:       0.093 [ms] (mean, across all concurrent requests)
+< Transfer rate:          21275.69 [Kbytes/sec] received
+---
+> Requests per second:    7216.77 [#/sec] (mean)
+> Time per request:       138.566 [ms] (mean)
+> Time per request:       0.139 [ms] (mean, across all concurrent requests)
+> Transfer rate:          14919.82 [Kbytes/sec] received
+28,31c28,31
+< Connect:        0    3   3.2      2      13
+< Processing:     2   85  44.8     82     336
+< Waiting:        1   85  44.8     81     334
+< Total:          2   88  44.6     84     338
+---
+> Connect:        0    2   3.4      0      12
+> Processing:    17  129  36.2    126     286
+> Waiting:        5  125  33.8    123     279
+> Total:         17  131  34.5    127     287
+34,42c34,42
+<   50%     84
+<   66%    102
+<   75%    114
+<   80%    121
+<   90%    145
+<   95%    170
+<   98%    197
+<   99%    222
+<  100%    338 (longest request)
+---
+>   50%    127
+>   66%    131
+>   75%    136
+>   80%    140
+>   90%    174
+>   95%    216
+>   98%    228
+>   99%    241
+>  100%    287 (longest request)
